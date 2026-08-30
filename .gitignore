@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.pytest_cache/
+
+# Excluded from the GitHub repo per request (kept locally only)
+WRITEUP.md
+docs/

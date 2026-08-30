@@ -1,0 +1,78 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "title": "Widget Service — Reliability",
+  "tags": ["sd1", "reliability"],
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "5s",
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate by status (req/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 20 } }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{route=\"/widgets/{id}\"}[1m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency p50 / p95 / p99 (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{route=\"/widgets/{id}\"}[1m])) by (le))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=\"/widgets/{id}\"}[1m])) by (le))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{route=\"/widgets/{id}\"}[1m])) by (le))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "DB pool state (THE key signal)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "description": "checked_out pinned at size = pool exhausted.",
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "expr": "db_pool_connections{state=\"checked_out\"}", "legendFormat": "checked_out" },
+        { "expr": "db_pool_connections{state=\"available\"}", "legendFormat": "available" },
+        { "expr": "db_pool_connections{state=\"size\"}", "legendFormat": "size (max)" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "DB checkout wait p95 (s) + timeouts/s",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(db_pool_checkout_wait_seconds_bucket[1m])) by (le))", "legendFormat": "checkout wait p95" },
+        { "expr": "sum(rate(db_pool_checkout_timeouts_total[1m]))", "legendFormat": "checkout timeouts/s" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "In-flight requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [ { "expr": "http_requests_in_flight", "legendFormat": "in-flight" } ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Downstream latency p95 (s) — is the dependency itself slow?",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(downstream_request_duration_seconds_bucket[1m])) by (le))", "legendFormat": "downstream p95" }
+      ]
+    }
+  ]
+}
