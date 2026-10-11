@@ -96,13 +96,15 @@ async def get_widget(widget_id: int, request: Request):
 
 
 async def _handle_buggy(client, widget_id):
-    """BUGGY PATH (ADR 0002): the DB connection is held across the slow call."""
+    """DB connection is released before the slow downstream call."""
     async with db.acquire_session() as session:
         widget = await _load_widget(session, widget_id)
-        # The connection is STILL checked out while we await the slow downstream.
-        computed = await call_downstream(client, widget_id)
+        db_wait = session.info.get("db_wait_ms")
+    # Connection is back in the pool. The slow call holds no DB resource.
+    computed = await call_downstream(client, widget_id)
+    async with db.acquire_session() as session:
         await _record_access(session, widget_id)
-        return widget, computed, session.info.get("db_wait_ms")
+    return widget, computed, db_wait
 
 
 async def _handle_fixed(client, widget_id):
